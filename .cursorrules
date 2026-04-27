@@ -1,0 +1,232 @@
+################################################################################
+project:
+  name: MagicSquare
+  language: Python
+  version: "3.10+"
+  pattern: ECB (Entity-Control-Boundary)
+  description: >
+    마방진(Magic Square) 생성·검증·풀이를 다루는 Python 프로젝트.
+    ECB 아키텍처와 TDD 사이클을 엄격하게 준수한다.
+
+################################################################################
+code_style:
+  python_version: "3.10+"
+  style_guide: PEP8 엄격 준수
+  formatter: Black
+  max_line_length: 88
+  type_hints:
+    required: true
+    scope: 모든 함수 파라미터와 반환값
+    note: Optional, Union 등 복합 타입도 명시한다
+  docstring:
+    style: Google
+    scope: 모든 public 메서드·클래스·모듈
+    example: |
+      def solve(size: int) -> list[list[int]]:
+          """마방진을 생성한다.
+
+          Args:
+              size: 마방진의 한 변 크기 (홀수여야 한다).
+
+          Returns:
+              size x size 크기의 마방진 2D 리스트.
+
+          Raises:
+              ValueError: size가 홀수가 아닐 경우.
+          """
+  import_order: isort 기준 (stdlib → third-party → local)
+  naming:
+    classes: PascalCase
+    functions: snake_case
+    constants: UPPER_SNAKE_CASE
+    private: _leading_underscore
+
+################################################################################
+architecture:
+  pattern: ECB (Entity-Control-Boundary)
+  layers:
+    boundary:
+      description: 외부 입출력 담당 — UI, CLI, API, 파일 I/O
+      responsibilities:
+        - 사용자 입력 수집 및 유효성 1차 검사
+        - 결과 출력 및 포맷 변환
+        - 외부 시스템(파일·네트워크)과의 인터페이스
+      allowed_dependencies: [control]
+      forbidden_dependencies: [entity]
+    control:
+      description: 비즈니스 로직 담당 — 흐름 제어, 유스케이스 조율
+      responsibilities:
+        - 마방진 생성·검증·풀이 알고리즘 실행 흐름 관리
+        - boundary와 entity 사이의 데이터 변환·전달
+        - 예외 처리 및 트랜잭션 경계
+      allowed_dependencies: [entity]
+      forbidden_dependencies: [boundary]
+    entity:
+      description: 도메인 데이터 및 규칙 담당 — 순수 도메인 모델
+      responsibilities:
+        - 마방진 데이터 구조 정의
+        - 도메인 불변식(홀수 크기, 합 조건 등) 검증
+        - 상태 없는 순수 함수 및 값 객체
+      allowed_dependencies: []
+      forbidden_dependencies: [control, boundary]
+  dependency_direction: boundary → control → entity
+  dependency_rule: 의존성은 항상 외부(boundary)에서 내부(entity) 방향으로만 흐른다
+
+################################################################################
+tdd_rules:
+  red_phase:
+    description: 테스트를 먼저 작성하고 실패를 확인한 뒤 다음 단계로 진행한다
+    rules:
+      - 구현 코드 작성 전 반드시 테스트를 먼저 작성한다
+      - 테스트가 실제로 실패(RED)함을 확인한 후에만 green_phase로 넘어간다
+      - 테스트는 하나의 동작만 검증하도록 최소 단위로 작성한다
+      - 컴파일·임포트 오류도 실패로 간주하며 통과 조건에 포함하지 않는다
+    must_not:
+      - 테스트 없이 구현 코드를 먼저 작성하는 행위
+      - 여러 동작을 한 테스트에 묶어 작성하는 행위
+      - 실패 확인 없이 바로 green_phase로 전환하는 행위
+  green_phase:
+    description: 최소한의 코드로만 테스트를 통과시키며 이 단계에서 리팩터링은 금지한다
+    rules:
+      - 테스트를 통과시키는 가장 단순한 코드만 작성한다
+      - 미래를 위한 설계·추상화·최적화를 이 단계에서 수행하지 않는다
+      - 리팩터링은 반드시 refactor_phase로 미룬다
+      - 모든 기존 테스트가 GREEN 상태를 유지해야 다음 단계로 진행한다
+    must_not:
+      - 이 단계에서 클래스 구조 재설계 또는 함수 분리를 수행하는 행위
+      - 통과와 무관한 코드(로깅, 주석, 타입 개선 등)를 추가하는 행위
+      - 기존 테스트를 수정하여 통과율을 높이는 행위
+  refactor_phase:
+    description: 기능 변경 없이 구조를 개선하며 커버리지를 유지한다
+    rules:
+      - 외부 동작(public API·테스트 결과)을 변경하지 않는다
+      - 리팩터링 전후 전체 테스트 스위트가 GREEN이어야 한다
+      - 코드 커버리지가 리팩터링 이전 수준 이상으로 유지되어야 한다
+      - 리팩터링 중 새로운 기능을 추가하지 않는다
+    must_not:
+      - 리팩터링 도중 새 기능을 슬그머니 추가하는 행위
+      - 테스트를 삭제하거나 skip 처리하여 커버리지를 우회하는 행위
+      - 리팩터링 후 테스트 전체 실행을 생략하는 행위
+
+################################################################################
+testing:
+  framework: pytest
+  pattern: AAA (Arrange-Act-Assert)
+  coverage:
+    tool: pytest-cov
+    minimum: 80%
+    fail_under: true
+    report: term-missing
+  fixture_scope:
+    function: 기본값. 각 테스트마다 새 인스턴스가 필요한 경우
+    class: 동일 클래스 내 테스트들이 상태를 공유해도 안전한 경우
+    module: 생성 비용이 크고 불변인 데이터(예: 대형 마방진 샘플)
+    session: 전체 테스트 스위트에서 단 한 번만 초기화해도 되는 경우
+  naming_convention:
+    files: test_*.py 또는 *_test.py
+    functions: test_ 접두사 필수
+    classes: Test 접두사 필수 (예: TestMagicSquareValidator)
+    fixtures: 역할이 명확한 명사형 (예: valid_square, odd_size)
+  directory: tests/
+  markers:
+    unit: 단일 함수·클래스 단위 테스트
+    integration: 레이어 간 통합 테스트
+    slow: 실행 시간이 1초를 초과하는 테스트
+
+################################################################################
+forbidden:
+  - pattern: "print()"
+    reason: 프로덕션 코드에 print를 사용하면 로그 추적이 불가능하다
+    alternative: logging 모듈 사용 (logging.info, logging.debug 등)
+
+  - pattern: 하드코딩 상수 (매직 넘버·매직 문자열)
+    reason: 의미를 알 수 없고 변경 시 누락이 발생한다
+    alternative: entity 레이어 또는 별도 constants.py에 명명 상수로 정의
+
+  - pattern: "except:"  # 단독 bare except
+    reason: 모든 예외를 무차별 포획하여 디버깅을 불가능하게 만든다
+    alternative: "except SpecificError as e: 로 구체적 예외 명시"
+
+  - pattern: ECB 레이어 역방향 의존성 (entity → control, entity → boundary, control → boundary)
+    reason: 도메인 순수성을 깨뜨리고 테스트 격리를 방해한다
+    alternative: 의존성 역전(DIP) 또는 이벤트/콜백 패턴 사용
+
+  - pattern: 타입힌트 없는 함수 정의
+    reason: 정적 분석 도구(mypy)가 오류를 감지할 수 없고 가독성이 저하된다
+    alternative: 모든 파라미터와 반환값에 타입힌트 명시
+
+  - pattern: 테스트 파일 내 assert 외 검증 (예외 미사용 assertEqual 등)
+    reason: pytest 스타일과 혼재되어 가독성이 저하된다
+    alternative: pytest의 assert 문과 pytest.raises() 일관 사용
+
+################################################################################
+file_structure:
+  root_comment: |
+    # MagicSquare 프로젝트 디렉터리 구조 (ECB 패턴 기준)
+    #
+    # magic_square/
+    # ├── boundary/               # 외부 입출력 레이어
+    # │   ├── __init__.py
+    # │   ├── cli.py              # CLI 진입점
+    # │   └── formatter.py        # 출력 포맷 변환
+    # │
+    # ├── control/                # 비즈니스 로직 레이어
+    # │   ├── __init__.py
+    # │   ├── generator.py        # 마방진 생성 유스케이스
+    # │   ├── validator.py        # 마방진 검증 유스케이스
+    # │   └── solver.py           # 마방진 풀이 유스케이스
+    # │
+    # ├── entity/                 # 도메인 모델 레이어
+    # │   ├── __init__.py
+    # │   ├── square.py           # MagicSquare 도메인 객체
+    # │   ├── rules.py            # 도메인 불변식 (합 조건 등)
+    # │   └── constants.py        # 도메인 상수
+    # │
+    # ├── tests/                  # 테스트 스위트
+    # │   ├── __init__.py
+    # │   ├── conftest.py         # 공용 fixture
+    # │   ├── boundary/
+    # │   │   ├── test_cli.py
+    # │   │   └── test_formatter.py
+    # │   ├── control/
+    # │   │   ├── test_generator.py
+    # │   │   ├── test_validator.py
+    # │   │   └── test_solver.py
+    # │   └── entity/
+    # │       ├── test_square.py
+    # │       └── test_rules.py
+    # │
+    # ├── pyproject.toml          # 프로젝트 메타데이터 및 도구 설정
+    # ├── .cursorrules            # Cursor AI 행동 규칙
+    # └── README.md
+  conventions:
+    - 각 레이어 폴더는 반드시 __init__.py를 포함한다
+    - 테스트 폴더 구조는 소스 폴더 구조를 그대로 미러링한다
+    - 레이어를 넘나드는 유틸리티는 entity/constants.py 또는 별도 utils/ 폴더에 둔다
+
+################################################################################
+ai_behavior:
+  before_generating_code:
+    - 관련 테스트 파일을 먼저 확인하고, 없으면 테스트 작성을 먼저 제안한다
+    - 수정 대상 코드가 속한 ECB 레이어를 파악한다
+    - 현재 TDD 사이클 단계(red/green/refactor)를 확인한다
+    - 요청이 tdd_rules를 위반하는지 검토한다
+
+  while_generating_code:
+    - 모든 함수·메서드에 타입힌트를 반드시 포함한다
+    - ECB 레이어 경계를 위반하는 의존성을 생성하지 않는다
+    - 타입힌트 없는 함수를 생성하지 않는다
+    - print() 대신 logging을 사용한다
+    - 하드코딩 상수를 코드 내에 삽입하지 않는다
+    - bare except 절을 사용하지 않는다
+
+  after_generating_code:
+    - 생성한 코드가 code_style 규칙(PEP8, Black, 타입힌트, docstring)을 준수하는지 자가 검토한다
+    - 생성한 코드가 속한 ECB 레이어의 allowed_dependencies를 위반하지 않는지 확인한다
+    - 커버리지 최소 기준(80%) 충족 여부를 언급한다
+
+  warnings:
+    - tdd_rules의 must_not 항목을 위반하는 요청을 받으면 코드 생성 전에 경고를 출력하고 올바른 단계를 안내한다
+    - ECB 레이어 경계 위반이 감지되면 "⚠ ECB 경계 위반" 경고와 함께 올바른 레이어를 제안한다
+    - 타입힌트 없는 함수 생성 요청 시 "⚠ 타입힌트 누락" 경고를 출력하고 타입힌트를 추가한다
+    - green_phase에서 리팩터링 요청이 오면 "⚠ green_phase에서는 리팩터링 금지" 경고를 출력한다
