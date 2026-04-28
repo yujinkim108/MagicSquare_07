@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "You are a session-end detector. Examine the hook input JSON (provided as $ARGUMENTS). Check if the LAST user message contains any session-ending phrases in Korean or English, such as: 끝, 종료, 마무리, 끝내, 그만, 작별, 마치자, 대화 끝, 세션 종료, done, finish, end session, goodbye, bye, wrap up, close, quit, exit, that's all. IMPORTANT: Only trigger if the phrase clearly indicates the user wants to END the entire session/conversation — not just end a single task. If YES (session ending detected): return exactly {\"followup_message\": \"두 가지 작업을 순서대로 해줘. 1) 이 세션에서 작업한 내용을 한국어로 정리해서 Report/ 폴더에 마크다운 보고서 파일로 저장해줘. 기존 Report/ 폴더 파일들의 번호보다 하나 더 큰 번호(두 자리)로 시작하는 파일명을 사용해줘 (예: 05_hooks_setup_report.md). 보고서에는 세션 날짜, 수행한 작업 목록, 주요 변경사항, 결과물, 다음 단계(있다면)를 포함해줘. 2) 1번에서 저장한 보고서 파일명(확장자 포함, 예: 05_hooks_setup_report.md)을 인자로 넘겨서 'python .cursor/hooks/save-transcript.py <보고서파일명>' 명령을 실행해줘. 그러면 Prompting/ 폴더에 같은 이름에 -prompt가 붙은 파일(예: 05_hooks_setup_report-prompt.md)로 transcript가 저장돼.\"}. If NO (normal conversation turn): return exactly {}",
+        "loop_limit": 1
+      }
+    ]
+  }
+}
