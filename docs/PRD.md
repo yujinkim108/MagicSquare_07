@@ -1,10 +1,11 @@
 # MagicSquare — Product Requirements Document (PRD)
 
 **문서 유형:** 제품·프로젝트 요구사항 통합  
-**최종 정리:** 2026-04-27  
+**최종 정리:** 2026-04-28  
 **원천:** `Report/` · `Prompting/` 산출물(문제 정의, TDD·ECB 설계, 사용자 여정, Gherkin, 검증, `.cursorrules` 가이드)
 
-이 문서는 **구현을 대체하는 스펙**이 아니라, **목표·범위·계약·성공 기준**을 한곳에 모은 **요구사항 계층**이다. 상세한 테스트 ID·스냅샷 전문은 개별 `Report/*.md`를 **source of truth**로 둔다.
+이 문서는 **구현을 대체하는 스펙**이 아니라, **목표·범위·계약·성공 기준**을 한곳에 모은 **요구사항 계층**이다. 상세한 테스트 ID·스냅샷 전문은 개별 `Report/*.md`를 **source of truth**로 둔다.  
+**Dual-Track**을 **UI(경계·UX Contract)** 와 **Logic(엔티티·제어·규칙)** 의 이원으로 별도로 두고, Logic **내부**에서는 **Contract vs Algorithm** 이원을 유지한다([§2.4](#24-dual-track-범위-정렬-ui--logic--mlops), [§6.1](#61-ecb-프로젝트-규칙)).
 
 ---
 
@@ -15,7 +16,7 @@
 | 항목 | 내용 |
 |------|------|
 | **Epic** | Invariant(불변조건) 기반 사고 훈련 시스템 구축 |
-| **핵심** | 4×4 Magic Square를 도구로, **규정을 쪼개고 이름을 붙이고 누락 없이 적용**하는 사고·**Dual-Track TDD**·**ECB**·**계약 명확화**를 훈련한다. |
+| **핵심** | 4×4 Magic Square를 도구로, **규정을 쪼개고 이름을 붙이고 누락 없이 적용**하는 사고·**UI·Logic 이원 TDD**·Logic **내부** Contract/Algorithm 이원·**ECB**·**계약 명확화**를 훈련한다. |
 
 ### 1.2 문제 정의(요지)
 
@@ -67,6 +68,17 @@
 
 **Prompting** 폴더(`*_prompt.md`)는 위 Report를 생성·내보내는 데 쓰인 **대화/지시 흔적**이며, 요구사항 본문은 **Report**와 동일 선상의 내용을 반영한다.
 
+### 2.4 Dual-Track 범위 정렬 (UI · Logic · MLOps)
+
+| 층 | 역할 | 이 PRD에서의 위치 |
+|----|------|-------------------|
+| **UI 트랙** | 경계(현재: **CLI**·향후: Web 등)에서 **UX Contract** — 보이는 메시지·가능/불가·상태를 **RED**로 고정 | [§3.1](#31-ux-contract경계-요약), [§5](#5-기능-요구사항-user-stories) 매핑 표, §6 `boundary` |
+| **Logic 트랙** | **Entity + Control** 및 §6.1 **내부** **Track A/B** — 불변조건·I/O·검증·알고리즘(백트래킹 등) | [§4](#4-핵심-invariant-epic-기준-inv-0110), [§5](#5-기능-요구사항-user-stories), [§6.1~6.2](#61-ecb-프로젝트-규칙) |
+| **MLOps** | 모델·데이터·배포·관측(스키마·버전·SLO) — **본 제품(숫자 퍼즐·CLI 학습)의 필수 범위는 아님** | [§6.4](#64-mlops-확장-시-원칙) (확장 시만) |
+
+- **독립성:** UI(또는 CLI) 측 테스트는 **렌더링·문구·종료 코드** 등 **계약된 표현**만 본다. Logic 테스트는 **도메인 객체·유스케이스**만 본다. **서로의 내부 구현을 알지 않는다.**
+- **MLOps**는 지금 문서의 **US·INV**에 직접 대응하지 않는다. ML·추론이 붙는 확장을 할 때만 §6.4를 **스코프·계약**에 맞춰 구체화한다.
+
 ---
 
 ## 3. 사용자·페르소나 (요약)
@@ -78,8 +90,21 @@
 | **불안** | “무엇을 테스트해야 할지” 모호함 |
 | **성공** | Invariant·계약이 **먼저** 오고 구현·테스트가 **뒤따르는** 순서가 **자연스럽**게 된다. |
 
-**여정(고수준):** 문제 인식(Invariant) → **계약** 정의 → **도메인 분리** → **Dual-Track** RED→GREEN→REFACTOR → **회귀**(엣지·오류·조합 실패).  
+**여정(고수준):** 문제 인식(Invariant) → **계약** 정의 → **도메인 분리** → **UI·Logic 이원** 및 Logic **내부** Contract/Algorithm **RED**→GREEN→REFACTOR → **회귀**(엣지·오류·조합 실패).  
 — 상세: `05-user-journey-level2.md`.
+
+### 3.1 UX Contract(경계) 요약
+
+경계(현재 **CLI**, GUI 도입 시 **동일 역할의 다른 표현**)에서 쓰는 **UX Contract 언어**를 일관되게 쓰면, 시나리오→테스트로 옮기기 쉽다. (Logic 쪽 **Logic Rule** 어휘와 [§5](#5-기능-요구사항-user-stories) 매핑 표로 짝을 맞출 것.)
+
+| UX Contract(표현) | 예시 (이 프로젝트) |
+|--------------------|---------------------|
+| **Visible / Not visible** | 오류/성공 문구가 stdout·stderr(또는 UI)에 **보인다 / 안 보인다** |
+| **Possible / Impossible** | 제출·다음 단계가 **가능/불가** (CLI: 성공 exit / 비정상 입력 시 안내) |
+| **Active / Inactive** | (GUI 도입 시) 입력·버튼 **활성/비활성** |
+| **Include / Do not include** | 응답·로그에 **에러코드·메시지**를 **포함/미포함** (`02` §2.4와 정합) |
+
+**TDD로 옮길 때:** “결정(Decision)”이 있는 문장(무엇이 **보이는지**, 어떤 **에러코드**가 **반환**되는지)을 우선한다. 구현 세부(내부 함수명)만 있는 할 일은 테스트 **정본**으로 삼지 않는다.
 
 ---
 
@@ -129,6 +154,18 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 
 **의존(권장):** US-01 → US-02/US-03 → US-04 → US-05.
 
+#### 시나리오 → UX Contract · Logic Rule (3단 매핑, 요약)
+
+`06-user-journey-stories.md`·Gherkin과 **같은 시나리오**에 대해, 경계(현재 CLI)와 도메인을 **한 표**로 맞추면 UI·Logic 트랙이 갈리지 않는다. 아래는 PRD용 **압축 예**이며, 세부는 Report 정본이 우선이다.
+
+| 시나리오(요지) | UX Contract (Boundary / UI 트랙) | Logic Rule (Control + Entity) |
+|---------------|-----------------------------------|------------------------------|
+| 행/열/대각 합이 magic sum이 아님(완성·판정 L3) | (CLI) **해 설명/오류** 메시지가 **보인다** / stderr에 **포함** | `MagicSquareValidator`가 **거부** |
+| 빈칸이 2개가 아님 | (CLI) `INVALID_BLANK_COUNT` **포함** 메시지 **visible** | 경계·도메인 검증에서 흐름 **중단**·`INVALID_BLANK_COUNT` |
+| 잘못된 값/중복(US-01) | (CLI) 해당 **에러코드·문구** **visible** | 입력·격자가 도메인으로 **차단** |
+| 2-blank 퍼즐 **성공** (US-05) | (CLI) 6원소/좌표 형식 **포함**·성공 **visible** | 해 **반환**(`02`·`08` **출력** 계약) |
+| **정책:** G1(§7) — **동일 Given**으로 “순성공·역성공”이 **둘 다** 성립하지 않을 수 있음 | 시나리오·픽스처·Given을 **분리**해 각 UX·Logic 쌍이 **하나씩** 검증되게 | |
+
 ---
 
 ## 6. 아키텍처·의존성
@@ -137,11 +174,15 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 
 - **entity:** 도메인 모델·불변·순수 규칙. **entity는 control/boundary에 의존하지 않는다.**  
 - **control:** 유스케이스(생성·검증·풀이 등 **흐름**). **boundary에 의존하지 않는다.**  
-- **boundary:** CLI, 포맷, **1차 입력 검사**, 결과 직렬화. **entity를 직접 참조하지 말고 control을 경유**하는 것이 `.cursorrules` / `03-cursorrules-setup` 정신이다.
+- **boundary:** CLI, 포맷, **1차 입력 검사**, 결과 직렬화. **entity를 직접 참조하지 말고 control을 경유**하는 것이 `.cursorrules` / `03-cursorrules-setup` 정신이다. (GUI·Web이 생기면 **같은 control**을 부르는 **또 하나의 boundary**로 두어, **UI·Logic 이원**을 유지한다.)
 
-**Dual-Track TDD (요지):**  
-- **Track A (Contract):** 입출력·예외가 Invariant와 **일치**; 알고리즘 변경 후에도 유지.  
-- **Track B (Algorithm):** 백트래킹·CSP 등 **내부** 전략; 리팩터 시 **바뀌어도 되는** 층.
+**용어 정리 — “Dual-Track” 두 층 (혼동 방지):**  
+
+1. **상위 이원 (UI·Logic):** **UI 트랙** = 경계·UX Contract로 RED(디자인·CLI 계약). **Logic 트랙** = Entity + Control(및 아래 2.)으로 RED(규칙·I/O).  
+2. **Logic 내부 이원 (Track A / Track B):** **Track A (Contract)** — 입출력·예외·Invariant; 알고리즘을 갈아끼워도 **유지**. **Track B (Algorithm)** — 백트래킹·CSP 등 **내부** 전략; 리팩터 시 **바뀌어도 되는** 층.  
+
+- **Track A (Contract) / Track B (Algorithm):** **Logic 트랙 안**의 구분이다. **UI 트랙**과 **이름이 겹치지 않게** “Contract 트랙(Logic)”/“알고리즘 트랙(Logic)”으로 읽는다.  
+- **RED의 근거:** “UI는 **UX Contract**로, Logic은 **Logic Rule**·I/O로” RED를 남긴다. **GREEN / REFACTOR**는 **양 트랙**에서 **함께** 가치를 유지한다(§3.1, [§5](#5-기능-요구사항-user-stories) 매핑).
 
 ### 6.2 설계서의 핵심 I/O (2-blank 퍼즐, `02`)
 
@@ -159,6 +200,19 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 - **TDD:** `red` / `green` / `refactor`, 각 **must_not** 준수.  
 - **금지:** `print` (대신 `logging`), **bare** `except`, **매직 넘버/문자열**, ECB **역의존**, **타입 없는** public API 등.  
 - **테스트:** pytest, **최소 커버 80%**, `fail_under` 등 `pyproject`·규칙에 따름.
+
+### 6.4 MLOps (확장 시 원칙)
+
+현재 PRD의 In Scope(§2.1)에는 **모델 추론·학습 파이프라인·서빙**이 없다. MLOps를 “Dual-Track UI + Logic + MLOps”에 맞게 붙일 **확장**을 할 때만 아래를 **스코프·계약**에 구체 기입한다.
+
+| 구분 | 내용 |
+|------|------|
+| **Logic** | 추론 **입·출력 스키마**, 전처리 **허용/거부**, **비즈니스** 임계값(거부=Logic Rule) — **pytest** 등으로 **결정** 검증(고정 시드·골든 세트·스키마). |
+| **MLOps** | **아티팩트·모델 버전**, 배포, **SLO·가용성**, **스키마/계약** 점검(회귀·스모크); **드리프트** 등은 **모니터링**·알람(단위 RED와 **분리**). |
+| **UI** | 추론 **결과·경고·재시도**를 [§3.1](#31-ux-contract경계-요약) **UX Contract**로만 노출; UI 테스트는 **API 목/스텁**으로 Logic·MLOps와 **독립**. |
+| **비결정성** | 동일 입력에 **확률적** 출력이면, Logic RED는 **스키마·하한/상한**·동작 등 **고정 계약**에 두고, **분포/품질**은 MLOps·관측 측에 둔다. |
+
+이 절이 비어 있으면 **MLOps 요구는 없다**고 본다(§2.2와 함께 [§2.4](#24-dual-track-범위-정렬-ui--logic--mlops) 참고).
 
 ---
 
@@ -182,6 +236,8 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 | 추적 | INV-01~10 ↔ 테스트(문서화) |
 | 회귀 | 기존 삭제·대체·스킵 금지 정책 (`02` REG, `05` Step 5) |
 | BDD/CI | pytest-bdd·black·mypy·isort — **도입은 선택/미체크**(`09` §1.3~1.4) |
+| UI(확장 시) | Web/GUI 도입 시 **E2E·접근성** 목표는 별도 행(릴리스)에 **추가**; 현재는 **CLI 계약**이 경계 NFR |
+| MLOps(확장 시) | §6.4에 정의한 **스키마·버전·SLO**; 본 PRD 1.0 **필수 NFR 아님** |
 
 ---
 
@@ -201,10 +257,15 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 
 | 용어 | 설명 |
 |------|------|
-| **Dual-Track TDD** | Contract 테스트 트랙 + Algorithm 트랙 |
+| **UI·Logic 이원 (상위 Dual-Track)** | **UI 트랙** = 경계·**UX Contract**로 RED. **Logic 트랙** = Entity+Control(및 **Logic 내부** Contract/Algorithm)으로 RED. **서로 독립**([§2.4](#24-dual-track-범위-정렬-ui--logic--mlops), [§3.1](#31-ux-contract경계-요약)) |
+| **Track A / Track B (Logic 내부)** | **Track A (Contract):** I/O·예외·Invariant — 알고리즘 교체 후에도 유지. **Track B (Algorithm):** 풀이 전략(백트래킹 등) — 리팩터로 **가변** ([§6.1](#61-ecb-프로젝트-규칙)) |
+| **Dual-Track TDD (구 표현)** | “Contract+Algorithm”만 Dual-Track이라고 부르면 **UI 트랙**과 혼동되므로, 이 문서에서는 **UI·Logic 이원**과 **Track A/B(Logic 내부)** 로 나누어 쓴다. |
+| **UX Contract** | Path·CLI·UI에서 “**무엇이 보이고·가능한가**”를 [§3.1](#31-ux-contract경계-요약) 어휘로 고정한 **경계 계약** |
+| **Logic Rule** | 도메인·검증이 **허용/거부/반환/차단/중단**하는 **결정**; [§5](#5-기능-요구사항-user-stories) **매핑** 열 |
 | **Invariant** | 주어진 범위·단계에서 **항상** 만족해야 할 조건 |
 | **ECB** | Entity–Control–Boundary |
 | **2-blank 퍼즐** | 0 **2칸**·나머지 14칸 + 누락 2수·**순·역** 2회 시도 (`02`·`06`·`08`) |
+| **MLOps(본 PRD)** | [§6.4](#64-mlops-확장-시-원칙) — **확장 시**만; 현재 **필수 범위 아님** |
 
 ---
 
@@ -228,4 +289,4 @@ Epic 문서(`04-user-journey-epic.md`)의 **Inv**는 **훈련·추적**에 초�
 
 ---
 
-*이 PRD는 `Report/`, `Prompting/`에 있는 `*.md`를 읽고 요약·정렬한 것이며, 수치·ID·에러문구·검산은 **최신 원문**을 우선한다.*
+*이 PRD는 `Report/`, `Prompting/`에 있는 `*.md`를 읽고 요약·정렬한 것이며, 수치·ID·에러문구·검산은 **최신 원문**을 우선한다. **UI·Logic·MLOps** 정렬·용어는 §2.4·§3.1·§6.4·§10을 본다.*
