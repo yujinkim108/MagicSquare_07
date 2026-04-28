@@ -9,6 +9,44 @@ from magicsquare.constants import CELL_EMPTY, CELL_MAX_VALUE, MAGIC_SUM, MATRIX_
 Coord = Tuple[int, int]
 
 
+def _sum_row(grid: list[list[int]], row: int) -> int:
+    return sum(grid[row])
+
+
+def _sum_col(grid: list[list[int]], col: int) -> int:
+    return sum(grid[row][col] for row in range(MATRIX_SIZE))
+
+
+def _sum_main_diag(grid: list[list[int]]) -> int:
+    return sum(grid[i][i] for i in range(MATRIX_SIZE))
+
+
+def _sum_anti_diag(grid: list[list[int]]) -> int:
+    return sum(grid[i][MATRIX_SIZE - 1 - i] for i in range(MATRIX_SIZE))
+
+
+def _try_placement(
+    grid: list[list[int]],
+    first_blank: Coord,
+    second_blank: Coord,
+    first_value: int,
+    second_value: int,
+) -> list[int] | None:
+    candidate = [row[:] for row in grid]
+    candidate[first_blank[0]][first_blank[1]] = first_value
+    candidate[second_blank[0]][second_blank[1]] = second_value
+    if not is_magic_square(candidate):
+        return None
+    return [
+        first_blank[0] + 1,
+        first_blank[1] + 1,
+        first_value,
+        second_blank[0] + 1,
+        second_blank[1] + 1,
+        second_value,
+    ]
+
+
 def find_blank_coords(grid: list[list[int]]) -> list[Coord]:
     """
     Return the two empty-cell coordinates in row-major (row asc, then col asc) order.
@@ -47,15 +85,15 @@ def is_magic_square(grid: list[list[int]]) -> bool:
         return False
 
     for r in range(MATRIX_SIZE):
-        if sum(grid[r]) != MAGIC_SUM:
+        if _sum_row(grid, r) != MAGIC_SUM:
             return False
     for c in range(MATRIX_SIZE):
-        if sum(grid[r][c] for r in range(MATRIX_SIZE)) != MAGIC_SUM:
+        if _sum_col(grid, c) != MAGIC_SUM:
             return False
 
-    if sum(grid[i][i] for i in range(MATRIX_SIZE)) != MAGIC_SUM:
+    if _sum_main_diag(grid) != MAGIC_SUM:
         return False
-    if sum(grid[i][MATRIX_SIZE - 1 - i] for i in range(MATRIX_SIZE)) != MAGIC_SUM:
+    if _sum_anti_diag(grid) != MAGIC_SUM:
         return False
     return True
 
@@ -72,26 +110,11 @@ def solution(grid: list[list[int]]) -> list[int]:
     first_blank, second_blank = blanks
     smaller, larger = find_not_exist_nums(grid)
 
-    def _try_assign(first_value: int, second_value: int) -> list[int] | None:
-        candidate = [row[:] for row in grid]
-        candidate[first_blank[0]][first_blank[1]] = first_value
-        candidate[second_blank[0]][second_blank[1]] = second_value
-        if not is_magic_square(candidate):
-            return None
-        return [
-            first_blank[0] + 1,
-            first_blank[1] + 1,
-            first_value,
-            second_blank[0] + 1,
-            second_blank[1] + 1,
-            second_value,
-        ]
-
-    ordered = _try_assign(smaller, larger)
+    ordered = _try_placement(grid, first_blank, second_blank, smaller, larger)
     if ordered is not None:
         return ordered
 
-    reversed_order = _try_assign(larger, smaller)
+    reversed_order = _try_placement(grid, first_blank, second_blank, larger, smaller)
     if reversed_order is not None:
         return reversed_order
     raise ValueError("NO_SOLUTION")
