@@ -1,8 +1,8 @@
 # 10 · Refactor 브랜치 + 테스트 보강 + 커버리지/설계 분석 내보내기
 
 **최초:** 2026-04-28  
-**최종 갱신:** 2026-04-28 (refactor 브랜치 작업, 테스트 보강, 분석 보고 포함)  
-**작업 유형:** **테스트·품질·설계 분석 작업** — 리팩토링 전 안전망 구축(테스트/커버리지)과 코드 구조 진단(Code Smell, ECB, SRP), 리팩토링 계획 수립  
+**최종 갱신:** 2026-04-28 (단일 커밋 Dual-Track 리팩토링 실행 및 커밋 반영)  
+**작업 유형:** **테스트·품질·설계 분석·리팩토링 작업** — 리팩토링 전 안전망 구축(테스트/커버리지), 코드 구조 진단(Code Smell, ECB, SRP), 단일 커밋 리팩토링 실행  
 **워크스페이스:** `c:\DEV\MagicSquare_07` (MagicSquare_07)
 
 **관련 보고서:** [`09-green-domain-boundary-gui-export.md`](./09-green-domain-boundary-gui-export.md), [`08-git-dual-track-red-venv-export.md`](./08-git-dual-track-red-venv-export.md)
@@ -21,6 +21,7 @@
 | 6 | ECB 관점 분석 | Boundary/Control 책임 경계 및 이동 후보 제시 |
 | 7 | SRP 관점 점검 | 함수 단위 복합 책임 지점 식별 |
 | 8 | 리팩토링 계획서 작성 | 우선순위/기법/검증 방법 문서화 |
+| 9 | 단일 커밋 Dual-Track REFACTOR 수행 | Logic Track에서 R-L2/R-L4를 최소 범위로 적용, GREEN 유지 |
 
 ---
 
@@ -39,6 +40,8 @@
 | 커밋 | 메시지 | 범위 |
 |------|--------|------|
 | `f24e1f2` | `test(magicsquare): add boundary and gui coverage tests` | 테스트 보강 파일 4개 |
+| `ec208c3` | `docs(report): export refactor test coverage analysis` | 본 보고서 초안 내보내기 |
+| `a725812` | `refactor(domain): extract sum helpers and placement attempt` | Domain 최소 범위 리팩토링 1커밋 |
 
 ---
 
@@ -137,7 +140,34 @@ pytest --cov=magicsquare --cov-report=term-missing
 
 ---
 
-## 7. 리팩토링 후 검증 기준
+## 7. 단일 커밋 리팩토링 실행 기록 (이번 추가 작업)
+
+### 7.1 수행 절차
+
+| 단계 | 내용 | 결과 |
+|------|------|------|
+| Step 0 | 기준선 테스트 실행 (`pytest -q`) | **33 passed** |
+| Step 1 | 목표 선택 | **R-L2**, **R-L4** 선택 (저위험/소범위) |
+| Step 2 | 보호 테스트 점검 | 기존 테스트가 계약을 충분히 보호하여 추가 없음 |
+| Step 3 | 리팩토링 수행 | `domain.py` 내부 helper 추출 및 시도 로직 분리 |
+| Step 4 | 회귀 테스트 재실행 (`pytest -q`) | **33 passed** |
+| Step 5 | 리팩토링 전용 커밋 생성 | `a725812` 생성 완료 |
+
+### 7.2 적용된 리팩토링 목표
+
+- **R-L2**: 행/열/대각선 합 계산 로직을 `_sum_row`, `_sum_col`, `_sum_main_diag`, `_sum_anti_diag`로 추출
+- **R-L4**: `solution()` 내 조합 시도 로직을 `_try_placement(...)`로 분리
+
+### 7.3 변경 전/후 핵심 개선
+
+- 변경 전: `is_magic_square()` 내부에 합 계산 패턴이 반복되어 수정 지점이 분산되어 있었음.  
+  변경 후: 합 계산 helper로 분리하여 중복 축소 및 가독성 개선.
+- 변경 전: `solution()`이 배치 시도와 반환 조립까지 중첩 함수에 결합되어 있었음.  
+  변경 후: 배치 시도 책임을 모듈 helper로 분리해 함수 역할이 더 명확해짐.
+
+---
+
+## 8. 리팩토링 후 검증 기준
 
 - 회귀 테스트: `pytest -q`
 - 커버리지 유지: `pytest --cov=magicsquare --cov-report=term-missing`
@@ -149,7 +179,7 @@ pytest --cov=magicsquare --cov-report=term-missing
 
 ---
 
-## 8. 산출 파일 (본 세션 핵심)
+## 9. 산출 파일 (본 세션 핵심)
 
 | 경로 | 설명 |
 |------|------|
@@ -157,6 +187,7 @@ pytest --cov=magicsquare --cov-report=term-missing
 | `tests/logic/test_domain_additional.py` | Domain 분기/실패 경로 테스트 |
 | `tests/ui_track/test_gui_app.py` | GUI 이벤트/파싱/에러 처리 테스트 |
 | `tests/ui_track/test_gui_main_entrypoint.py` | GUI 엔트리포인트 테스트 |
+| `magicsquare/domain.py` | R-L2/R-L4 적용 리팩토링 (기능/계약 유지) |
 | `Report/10-refactor-test-coverage-analysis-export.md` | 본 내보내기 보고서 |
 
 ---
