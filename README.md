@@ -12,7 +12,7 @@ Invariant(불변조건)와 **UI·Logic 이원 TDD**, **ECB(Entity–Control–Bo
 | 구분 | 내용 |
 |------|------|
 | **In scope** | 4×4 도메인, 입력 검증 계약, 마방진 판정, 빈칸 2개 부분 격자 완성 흐름, ECB, CLI 경계, pytest·커버리지 하한 |
-| **Out of scope** | GUI/Web UI, DB 영속(필수 아님), 5×5 이상 |
+| **Out of scope** | DB 영속(필수 아님), 5×5 이상 |
 
 자세한 스토리·Invariant 매핑은 PRD [§2](docs/PRD.md#2-범위-scope)·[§4](docs/PRD.md#4-핵심-invariant-epic-기준-inv-0110)·[§5](docs/PRD.md#5-기능-요구사항-user-stories-us-0105)를 참고한다.
 
@@ -151,15 +151,19 @@ Invariant(불변조건)와 **UI·Logic 이원 TDD**, **ECB(Entity–Control–Bo
 
 ---
 
-## 빠른 시작 (구현 후)
+## 빠른 시작 (GUI)
 
-애플리케이션 패키지·엔트리포인트가 추가되면 이 절에 설치·실행 예시를 적는다. (현재는 요구사항·설계 문서가 선행된 상태다.)
-
-```bash
-# 예시 (구현 시 조정)
-# python -m magic_square ...
-# pytest
+```powershell
+cd C:\DEV\MagicSquare_07
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e .[dev]
+python -m magicsquare.gui
 ```
+
+- 공식 GUI 실행 경로는 `python -m magicsquare.gui` 한 가지다.
+- 4x4 입력에서 빈칸은 `0`으로 입력하고, `풀기` 버튼으로 결과 `[r1,c1,n1,r2,c2,n2]`를 확인한다.
 
 ---
 
