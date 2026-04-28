@@ -5,7 +5,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from magicsquare.constants import CELL_EMPTY, EXPECTED_EMPTY_CELL_COUNT, MATRIX_SIZE
+from magicsquare.constants import (
+    CELL_EMPTY,
+    CELL_MAX_VALUE,
+    CELL_MIN_VALUE,
+    EXPECTED_EMPTY_CELL_COUNT,
+    MATRIX_SIZE,
+)
+from magicsquare.domain import solution
 
 
 class ErrorCode(str, Enum):
@@ -47,3 +54,42 @@ def validate_empty_cell_count(grid: list[list[int]]) -> None:
                 count += 1
     if count != EXPECTED_EMPTY_CELL_COUNT:
         raise BoundaryError(ErrorCode.INVALID_BLANK_COUNT)
+
+
+def validate_value_range(grid: list[list[int]]) -> None:
+    """All cells must be within [0, 16]."""
+    for r in range(MATRIX_SIZE):
+        for c in range(MATRIX_SIZE):
+            value = grid[r][c]
+            if value < CELL_MIN_VALUE or value > CELL_MAX_VALUE:
+                raise BoundaryError(ErrorCode.INVALID_VALUE_RANGE)
+
+
+def validate_no_duplicate_non_zero(grid: list[list[int]]) -> None:
+    """Non-zero values must be unique."""
+    seen: set[int] = set()
+    for r in range(MATRIX_SIZE):
+        for c in range(MATRIX_SIZE):
+            value = grid[r][c]
+            if value == CELL_EMPTY:
+                continue
+            if value in seen:
+                raise BoundaryError(ErrorCode.INVALID_DUPLICATE)
+            seen.add(value)
+
+
+def solve(grid: list[list[int]]) -> list[int]:
+    """
+    Boundary orchestrator for screen/CLI:
+    validate shape -> range -> blank count -> duplicate -> domain solution.
+    """
+    validate_4x4_shape(grid)
+    validate_value_range(grid)
+    validate_empty_cell_count(grid)
+    validate_no_duplicate_non_zero(grid)
+    try:
+        return solution(grid)
+    except ValueError as exc:
+        if str(exc) == "NO_SOLUTION":
+            raise BoundaryError(ErrorCode.NO_SOLUTION) from exc
+        raise
