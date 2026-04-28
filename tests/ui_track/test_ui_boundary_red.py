@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from boundary.errors import BoundaryError, ErrorCode
-from boundary.validation import validate_4x4_shape
+from magicsquare.boundary import BoundaryError, ErrorCode, validate_4x4_shape, validate_empty_cell_count
+from magicsquare.constants import CELL_EMPTY
 
 
 class TestUiBoundaryRed:
@@ -21,7 +21,11 @@ class TestUiBoundaryRed:
         assert exc_info.value.code is ErrorCode.INVALID_SIZE
 
     def test_ui_red_02_blank_count_not_two_raises(self) -> None:
-        pytest.fail("RED: not implemented")
+        # 4×4 but sixteen empties — UI-BC-04
+        all_empty = [[CELL_EMPTY] * 4 for _ in range(4)]
+        with pytest.raises(BoundaryError) as exc_info:
+            validate_empty_cell_count(all_empty)
+        assert exc_info.value.code is ErrorCode.INVALID_BLANK_COUNT
 
     def test_ui_red_03_value_out_of_range_raises(self) -> None:
         pytest.fail("RED: not implemented")
